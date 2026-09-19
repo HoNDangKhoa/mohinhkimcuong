@@ -54,32 +54,36 @@ function contentCount(store: CmsLocalStore) {
 }
 
 export async function writeLocalStore(store: CmsLocalStore) {
-  await mkdir(path.dirname(STORE_PATH), { recursive: true });
-  let existing: CmsLocalStore | null = null;
   try {
-    const parsed = JSON.parse(await readFile(STORE_PATH, "utf8")) as unknown;
-    if (isStore(parsed)) existing = migrateStore(parsed as CmsLocalStore);
-  } catch {
-    existing = null;
-  }
+    await mkdir(path.dirname(STORE_PATH), { recursive: true });
+    let existing: CmsLocalStore | null = null;
+    try {
+      const parsed = JSON.parse(await readFile(STORE_PATH, "utf8")) as unknown;
+      if (isStore(parsed)) existing = migrateStore(parsed as CmsLocalStore);
+    } catch {
+      existing = null;
+    }
 
-  const next = store;
-  if (existing && contentCount(existing) > 0 && contentCount(store) === 0 && !store.source) {
-    next.projects = existing.projects;
-    next.services = existing.services;
-    next.articles = existing.articles;
-    next.pages = existing.pages;
-    next.categories = existing.categories;
-    next.media = existing.media;
-    next.gallery = existing.gallery;
-    next.contacts = store.contacts.length ? store.contacts : existing.contacts;
-    next.settings = existing.settings;
-    next.settingRows = existing.settingRows;
-    next.source = existing.source;
-    next.importedAt = existing.importedAt;
-  }
+    const next = store;
+    if (existing && contentCount(existing) > 0 && contentCount(store) === 0 && !store.source) {
+      next.projects = existing.projects;
+      next.services = existing.services;
+      next.articles = existing.articles;
+      next.pages = existing.pages;
+      next.categories = existing.categories;
+      next.media = existing.media;
+      next.gallery = existing.gallery;
+      next.contacts = store.contacts.length ? store.contacts : existing.contacts;
+      next.settings = existing.settings;
+      next.settingRows = existing.settingRows;
+      next.source = existing.source;
+      next.importedAt = existing.importedAt;
+    }
 
-  await writeFile(STORE_PATH, JSON.stringify(next, null, 2), "utf8");
+    await writeFile(STORE_PATH, JSON.stringify(next, null, 2), "utf8");
+  } catch (error) {
+    console.warn("Môi trường Serverless (Vercel) không hỗ trợ ghi file JSON local:", error);
+  }
 }
 
 export async function getStoredCollection(key: CollectionKey): Promise<CmsContentRecord[]> {
