@@ -3,31 +3,43 @@ import { DIAMOND_VN_PROJECTS } from "@/lib/diamond-vn";
 import type { ArticleItem } from "@/lib/site-content";
 import { ProjectCard, type ProjectCardItem, SectionHeading } from "./SharedComponents";
 
-function toProjectCardItem(item: ArticleItem): ProjectCardItem {
-  const scale = item.meta.find((meta) => meta.label === "Tỷ lệ")?.value;
-  const location = item.meta.find((meta) => meta.label === "Địa điểm")?.value;
+function normalizeTitle(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
 
-  return {
-    title: item.title,
-    image: item.heroImage,
-    meta1: item.categoryLabel || "Mô hình kiến trúc",
-    meta2: scale || location || item.dateLabel,
-    meta2Type: "scale",
-  };
+function articleHref(item: ArticleItem) {
+  const base = item.categoryHref || "/du-an";
+  return `${base}/${item.slug}`.replace(/\/{2,}/g, "/");
+}
+
+function matchProject(title: string, items: ArticleItem[]) {
+  const needle = normalizeTitle(title);
+  return items.find((item) => normalizeTitle(item.title) === needle);
+}
+
+function toGroupCards(items: ArticleItem[]) {
+  return DIAMOND_VN_PROJECTS.map((group) => ({
+    id: group.id,
+    eyebrow: group.eyebrow,
+    title: group.title,
+    badge: group.badge,
+    cta: group.cta,
+    items: group.items.map((item): ProjectCardItem => {
+      const article = matchProject(item.title, items);
+      return {
+        title: article?.title || item.title,
+        image: article?.heroImage || item.image,
+        meta1: item.meta1,
+        meta2: item.meta2,
+        meta2Type: item.meta2Type,
+        href: article ? articleHref(article) : "/du-an",
+      };
+    }),
+  }));
 }
 
 export default function ProjectsSection({ items = [] }: { items?: ArticleItem[] }) {
-  const featuredItems = items.filter((item) => item.isFeatured).slice(0, 8);
-  const groups = featuredItems.length > 0
-    ? [{
-        id: "featured-projects",
-        eyebrow: "Dự án thực hiện",
-        title: "DỰ ÁN NỔI BẬT",
-        badge: "NỔI BẬT",
-        cta: "Xem thêm",
-        items: featuredItems.map(toProjectCardItem),
-      }]
-    : DIAMOND_VN_PROJECTS;
+  const groups = toGroupCards(items);
 
   return (
     <div className="flex flex-col gap-[50px]">

@@ -25,6 +25,8 @@ export function useCarouselInteraction({
   const pauseUntilRef = useRef(0);
   const ignoreClickRef = useRef(false);
   const ignoreClickTimerRef = useRef<number | null>(null);
+  const draggingRef = useRef(false);
+  const dragStartThreshold = 8;
 
   const pauseAuto = useCallback(() => {
     pauseUntilRef.current = Date.now() + pauseMs;
@@ -32,6 +34,7 @@ export function useCarouselInteraction({
 
   const resetDrag = useCallback(() => {
     pointerRef.current = null;
+    draggingRef.current = false;
     setDragOffset(0);
     setIsDragging(false);
   }, []);
@@ -72,14 +75,13 @@ export function useCarouselInteraction({
       if (!event.isPrimary) return;
 
       pauseAuto();
-      setIsDragging(true);
+      draggingRef.current = false;
+      setIsDragging(false);
       setDragOffset(0);
       pointerRef.current = {
         id: event.pointerId,
         startX: event.clientX,
       };
-
-      event.currentTarget.setPointerCapture(event.pointerId);
     },
     [pauseAuto]
   );
@@ -89,7 +91,15 @@ export function useCarouselInteraction({
 
     if (!pointer || pointer.id !== event.pointerId) return;
 
-    setDragOffset(event.clientX - pointer.startX);
+    const delta = event.clientX - pointer.startX;
+    if (!draggingRef.current) {
+      if (Math.abs(delta) < dragStartThreshold) return;
+      draggingRef.current = true;
+      setIsDragging(true);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+
+    setDragOffset(delta);
   }, []);
 
   const onPointerUp = useCallback(

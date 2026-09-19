@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { CARD_TITLE_CLASS } from "@/components/ui/cardTypography";
 
 export type ProjectCardItem = {
@@ -7,6 +8,7 @@ export type ProjectCardItem = {
   meta1: string;
   meta2: string;
   meta2Type: "area" | "bedroom" | "scale";
+  href?: string;
 };
 
 export function SectionHeading({
@@ -45,9 +47,11 @@ export function ProjectCard({
   badge: string;
 }) {
   const summary = `${item.meta1} · ${item.meta2}`;
+  const className =
+    "group flex h-full flex-col overflow-hidden rounded-[18px] border border-[#e7ddd0] bg-white shadow-[0_12px_30px_rgba(25,35,38,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(25,35,38,0.1)]";
 
-  return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[18px] border border-[#e7ddd0] bg-white shadow-[0_12px_30px_rgba(25,35,38,0.06)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(25,35,38,0.1)]">
+  const content = (
+    <>
       <div className="relative aspect-[16/10] bg-[#f4eee4]">
         <Image
           src={item.image}
@@ -57,6 +61,7 @@ export function ProjectCard({
           className="object-cover transition duration-500 group-hover:scale-[1.03]"
           loading="eager"
           quality={90}
+          draggable={false}
         />
       </div>
       <div className="flex flex-1 flex-col p-5">
@@ -67,13 +72,23 @@ export function ProjectCard({
           <span className="text-[12px] text-[#8a8277]">{item.meta1}</span>
           <span className="text-[12px] text-[#8a8277]">{item.meta2}</span>
         </div>
-        <h3 className={`ph-clamp-2 mt-4 min-h-[3rem] ${CARD_TITLE_CLASS} text-[#4f4b46]`}>{item.title}</h3>
+        <h3 className={`ph-clamp-2 mt-4 min-h-[3rem] ${CARD_TITLE_CLASS} text-[#4f4b46] transition group-hover:text-[#6b95a2]`}>{item.title}</h3>
         <p className="ph-clamp-2 mt-2 min-h-[2.75rem] text-[14px] leading-[1.65] tracking-normal text-[#5d5751]">
           {summary}
         </p>
       </div>
-    </article>
+    </>
   );
+
+  if (item.href) {
+    return (
+      <Link href={item.href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className={className}>{content}</article>;
 }
 
 export function VideoCard({ image, title, href }: { image: string; title: string; href?: string }) {

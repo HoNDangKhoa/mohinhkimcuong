@@ -52,6 +52,7 @@ function ServiceSlide({ item }: { item: ServiceCard }) {
           className="object-cover transition duration-500 group-hover:scale-[1.03]"
           loading="eager"
           quality={90}
+          draggable={false}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/18 via-black/8 to-transparent" />
         <span className="absolute left-4 top-4 inline-flex rounded-full bg-white/92 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6b95a2] shadow-sm">
