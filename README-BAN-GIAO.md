@@ -51,8 +51,7 @@ CMS quản trị local (`/admin`) dùng thêm:
 | Biến | Khi public | Ghi chú |
 |---|---|---|
 | `CMS_ADMIN_USER` / `CMS_ADMIN_PASSWORD` | Bắt buộc đổi | Mặc định local `admin` / `diamondmodel` |
-| `CMS_SESSION_SECRET` | Bắt buộc đổi | Chuỗi ngẫu nhiên; không để trống trên production |
-
+| `CMS_SESSION_SECRET` | Bwj0QF3DlPyMZYfl6HS8R5W/UuvfC8oztHWCguDo9bg=
 ---
 
 ## 4. Điều quan trọng nhất: website KHÔNG phụ thuộc sống còn vào CMS

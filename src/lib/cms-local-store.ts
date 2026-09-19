@@ -1,3 +1,4 @@
+import { Redis } from "@upstash/redis";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -17,6 +18,17 @@ import {
 } from "@/lib/cms-records";
 
 const STORE_PATH = path.join(process.cwd(), "data", "cms-local.json");
+const REDIS_STORE_KEY = "cms_store";
+
+let redisClient: Redis | null | undefined;
+
+function getRedisClient() {
+  if (redisClient !== undefined) return redisClient;
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  redisClient = url && token ? new Redis({ url, token }) : null;
+  return redisClient;
+}
 
 function isStore(value: unknown): value is CmsLocalStore | (CmsLocalStore & { version: 1 | 2 }) {
   if (!value || typeof value !== "object") return false;
@@ -38,15 +50,29 @@ function migrateStore(parsed: CmsLocalStore): CmsLocalStore {
   };
 }
 
-export async function readLocalStore(): Promise<CmsLocalStore> {
+async function readFileStore(): Promise<CmsLocalStore | null> {
   try {
     const raw = await readFile(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as unknown;
-    if (!isStore(parsed)) return structuredClone(EMPTY_STORE);
+    if (!isStore(parsed)) return null;
     return migrateStore(parsed as CmsLocalStore);
   } catch {
-    return structuredClone(EMPTY_STORE);
+    return null;
   }
+}
+
+export async function readLocalStore(): Promise<CmsLocalStore> {
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      const data = await redis.get<unknown>(REDIS_STORE_KEY);
+      if (isStore(data)) return migrateStore(data as CmsLocalStore);
+    } catch {
+      // Redis lỗi hoặc chưa có key — fallback file local.
+    }
+  }
+
+  return (await readFileStore()) ?? structuredClone(EMPTY_STORE);
 }
 
 function contentCount(store: CmsLocalStore) {
@@ -54,32 +80,41 @@ function contentCount(store: CmsLocalStore) {
 }
 
 export async function writeLocalStore(store: CmsLocalStore) {
-  try {
-    await mkdir(path.dirname(STORE_PATH), { recursive: true });
-    let existing: CmsLocalStore | null = null;
+  const redis = getRedisClient();
+  let existing: CmsLocalStore | null = null;
+
+  if (redis) {
     try {
-      const parsed = JSON.parse(await readFile(STORE_PATH, "utf8")) as unknown;
-      if (isStore(parsed)) existing = migrateStore(parsed as CmsLocalStore);
+      const data = await redis.get<unknown>(REDIS_STORE_KEY);
+      if (isStore(data)) existing = migrateStore(data as CmsLocalStore);
     } catch {
       existing = null;
     }
+  }
+  if (!existing) existing = await readFileStore();
 
-    const next = store;
-    if (existing && contentCount(existing) > 0 && contentCount(store) === 0 && !store.source) {
-      next.projects = existing.projects;
-      next.services = existing.services;
-      next.articles = existing.articles;
-      next.pages = existing.pages;
-      next.categories = existing.categories;
-      next.media = existing.media;
-      next.gallery = existing.gallery;
-      next.contacts = store.contacts.length ? store.contacts : existing.contacts;
-      next.settings = existing.settings;
-      next.settingRows = existing.settingRows;
-      next.source = existing.source;
-      next.importedAt = existing.importedAt;
-    }
+  const next = store;
+  if (existing && contentCount(existing) > 0 && contentCount(store) === 0 && !store.source) {
+    next.projects = existing.projects;
+    next.services = existing.services;
+    next.articles = existing.articles;
+    next.pages = existing.pages;
+    next.categories = existing.categories;
+    next.media = existing.media;
+    next.gallery = existing.gallery;
+    next.contacts = store.contacts.length ? store.contacts : existing.contacts;
+    next.settings = existing.settings;
+    next.settingRows = existing.settingRows;
+    next.source = existing.source;
+    next.importedAt = existing.importedAt;
+  }
 
+  if (redis) {
+    await redis.set(REDIS_STORE_KEY, next);
+  }
+
+  try {
+    await mkdir(path.dirname(STORE_PATH), { recursive: true });
     await writeFile(STORE_PATH, JSON.stringify(next, null, 2), "utf8");
   } catch (error) {
     console.warn("Môi trường Serverless (Vercel) không hỗ trợ ghi file JSON local:", error);
