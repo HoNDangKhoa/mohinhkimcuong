@@ -82,9 +82,11 @@ function NavItem({
 export default function Header({
   logoSrc,
   navItems = SITE_NAV_ITEMS,
+  phoneHref,
 }: {
   logoSrc?: string;
   navItems?: SiteNavItem[];
+  phoneHref?: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -182,7 +184,7 @@ export default function Header({
 
               <div className="hidden items-center gap-3 lg:flex">
                 <a
-                  href={`tel:${DIAMOND_VN_COMPANY.phoneHref}`}
+                  href={`tel:${phoneHref || DIAMOND_VN_COMPANY.phoneHref}`}
                   tabIndex={compact ? -1 : 0}
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-[#efbf73] text-[#5b746f] transition hover:scale-105"
                   aria-label="Gọi Diamond Model"
@@ -226,7 +228,7 @@ export default function Header({
             aria-hidden={!compact}
           >
             <a
-              href={`tel:${DIAMOND_VN_COMPANY.phoneHref}`}
+              href={`tel:${phoneHref || DIAMOND_VN_COMPANY.phoneHref}`}
               className="mr-7 flex h-12 w-12 items-center justify-center rounded-full bg-[#efbf73] text-[#5b746f] transition hover:scale-105 lg:h-14 lg:w-14"
               aria-label="Gọi Diamond Model"
               tabIndex={compact ? 0 : -1}
@@ -298,7 +300,7 @@ export default function Header({
               tabIndex={0}
             />
           ))}
-          <a href={`tel:${DIAMOND_VN_COMPANY.phoneHref}`} className="mt-4 text-lg font-semibold text-[#f1cd8a]">
+          <a href={`tel:${phoneHref || DIAMOND_VN_COMPANY.phoneHref}`} className="mt-4 text-lg font-semibold text-[#f1cd8a]">
             {DIAMOND_VN_COMPANY.phone}
           </a>
         </div>

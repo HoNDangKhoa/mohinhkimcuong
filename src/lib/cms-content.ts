@@ -10,6 +10,8 @@ import {
   getRelatedArticles,
 } from "@/lib/site-content";
 import { getCmsAboutPageSlug } from "@/lib/cms-settings";
+import { getStoredCollection } from "@/lib/cms-local-store";
+import { recordToArticleItem, recordsToCollection, siteSlugToCollection } from "@/lib/cms-records";
 
 type CollectionSlug = "gioi-thieu" | "du-an" | "dich-vu" | "tin-tuc";
 
@@ -226,6 +228,9 @@ function endpointForCollection(collection: Exclude<CollectionSlug, "gioi-thieu">
 export async function getCmsCollection(
   collection: Exclude<CollectionSlug, "gioi-thieu">,
 ): Promise<ArchiveCollection> {
+  const local = await getStoredCollection(siteSlugToCollection(collection));
+  if (local.length) return recordsToCollection(siteSlugToCollection(collection), local);
+
   const fallback = fallbackCollection(collection);
   const response = await cmsFetch<CmsListResponse<CmsContentBase | CmsProject>>(
     `${endpointForCollection(collection)}?limit=100`,
@@ -252,6 +257,17 @@ export async function getCmsArticleBySlug(
   collection: Exclude<CollectionSlug, "gioi-thieu">,
   slug: string,
 ): Promise<ArticleItem | null> {
+  const local = await getStoredCollection(siteSlugToCollection(collection));
+  if (local.length) {
+    const localRecord = local.find((item) => item.slug === slug);
+    if (!localRecord || (localRecord.status !== "published" && localRecord.status !== "review")) return null;
+    return recordToArticleItem(
+      localRecord,
+      collection,
+      getArticleBySlug(collection, slug) || fallbackCollection(collection).items[0],
+    );
+  }
+
   const fallback = getArticleBySlug(collection, slug);
   const response = await cmsFetch<CmsContentBase | CmsProject>(
     `${endpointForCollection(collection)}/${encodeURIComponent(slug)}`,
@@ -308,6 +324,13 @@ export async function getCmsStaticPageBySlug(
 ): Promise<ArticleItem | null> {
   const normalizedSlug = slug.replace(/^\/+|\/+$/g, "");
   if (!normalizedSlug) return null;
+
+  const localPages = await getStoredCollection("pages");
+  const localPage = localPages.find((item) => item.slug === normalizedSlug);
+  if (localPages.length) {
+    if (!localPage || (localPage.status !== "published" && localPage.status !== "review")) return null;
+    return recordToArticleItem(localPage, "gioi-thieu", fallback);
+  }
 
   const response = await cmsFetch<CmsPage>(`/api/public/pages/${encodeURIComponent(normalizedSlug)}`);
   if (!response?.slug) return null;

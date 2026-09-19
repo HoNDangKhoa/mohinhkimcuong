@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { DIAMOND_VN_COMPANY } from "@/lib/diamond-vn";
 import { openAdviseModal } from "@/lib/advise-modal";
+import type { HomeProcessSettings } from "@/lib/cms-settings";
 
 const PROCESS_STEPS = [
   {
@@ -27,20 +28,22 @@ const PROCESS_STEPS = [
   },
 ] as const;
 
-export default function ProcessSection() {
+export default function ProcessSection({ settings }: { settings?: HomeProcessSettings }) {
+  const steps = settings?.steps?.length ? settings.steps : PROCESS_STEPS;
+
   return (
     <section id="process" className="ph-section-surface scroll-mt-24">
       <div className="ph-container-wide">
         <div className="ph-process-header">
-          <p className="ph-eyebrow">Quy trình thiết kế & thi công sa bàn</p>
-          <h2 className="ph-process-title mt-3">QUY TRÌNH CHUYÊN NGHIỆP & RÕ RÀNG</h2>
+          <p className="ph-eyebrow">{settings?.eyebrow || "Quy trình thiết kế & thi công sa bàn"}</p>
+          <h2 className="ph-process-title mt-3">{settings?.title || "QUY TRÌNH CHUYÊN NGHIỆP & RÕ RÀNG"}</h2>
         </div>
 
         <div className="mt-14 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div className="overflow-hidden rounded-[28px] border border-[#e7ddd0] bg-white shadow-[0_18px_40px_rgba(25,35,38,0.08)]">
             <div className="relative aspect-[4/5] w-full">
               <Image
-                src={DIAMOND_VN_COMPANY.processThumb}
+                src={settings?.image || DIAMOND_VN_COMPANY.processThumb}
                 alt="Quy trình thiết kế và thi công sa bàn Diamond Model"
                 fill
                 sizes="(max-width: 1024px) 100vw, 520px"
@@ -51,7 +54,7 @@ export default function ProcessSection() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {PROCESS_STEPS.map((item) => (
+            {steps.map((item) => (
               <article
                 key={item.step}
                 className="rounded-[24px] border border-[#e7ddd0] bg-white p-6 shadow-[0_12px_30px_rgba(25,35,38,0.06)]"
@@ -73,7 +76,7 @@ export default function ProcessSection() {
             className="ph-button inline-flex"
             aria-haspopup="dialog"
           >
-            Đặt lịch KTS tư vấn
+            {settings?.ctaLabel || "Đặt lịch KTS tư vấn"}
           </button>
         </div>
       </div>

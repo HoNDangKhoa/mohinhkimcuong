@@ -5,9 +5,9 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ADVISE_MODAL_OPEN_EVENT, openAdviseModal } from "@/lib/advise-modal";
 import { submitContactToCms } from "@/lib/cms-contact";
 
-const RING_TEXT = "ĐẶT LỊCH KTS TƯ VẤN • ĐẶT LỊCH KTS TƯ VẤN • ";
+const DEFAULT_RING = "ĐẶT LỊCH KTS TƯ VẤN • ĐẶT LỊCH KTS TƯ VẤN • ";
 
-function ScheduleRing() {
+function ScheduleRing({ text }: { text: string }) {
   return (
     <svg
       viewBox="0 0 120 120"
@@ -25,14 +25,14 @@ function ScheduleRing() {
         letterSpacing="1.4"
       >
         <textPath href="#schedule-ring-path" startOffset="0%">
-          {RING_TEXT}
+          {text}
         </textPath>
       </text>
     </svg>
   );
 }
 
-function FloatingScheduleButton({ onClick }: { onClick: () => void }) {
+function FloatingScheduleButton({ onClick, ringText }: { onClick: () => void; ringText: string }) {
   return (
     <button
       type="button"
@@ -41,7 +41,7 @@ function FloatingScheduleButton({ onClick }: { onClick: () => void }) {
       className="fixed bottom-3 right-2 z-[60] h-[72px] w-[72px] md:bottom-6 md:right-6 md:h-[120px] md:w-[120px]"
     >
       <span className="relative block h-full w-full transition duration-300 ease-out hover:scale-[1.03]">
-        <ScheduleRing />
+        <ScheduleRing text={ringText} />
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="flex h-[46px] w-[46px] items-center justify-center rounded-full bg-[#6c96a2] shadow-[0_10px_22px_rgba(0,0,0,0.14)]">
             <CalendarDaysIcon className="h-5 w-5 text-[#efbe73]" />
@@ -267,8 +267,9 @@ function FloatingAdviseModal({ open, onClose }: { open: boolean; onClose: () => 
   );
 }
 
-export default function FloatingContact() {
+export default function FloatingContact({ ctaLabel }: { ctaLabel?: string }) {
   const [isOpen, setIsOpen] = useState(false);
+  const ringText = `${ctaLabel || "ĐẶT LỊCH KTS TƯ VẤN"} • ${ctaLabel || "ĐẶT LỊCH KTS TƯ VẤN"} • `;
 
   useEffect(() => {
     const handleOpen: EventListener = () => setIsOpen(true);
@@ -279,7 +280,7 @@ export default function FloatingContact() {
 
   return (
     <>
-      <FloatingScheduleButton onClick={openAdviseModal} />
+      <FloatingScheduleButton onClick={openAdviseModal} ringText={ringText || DEFAULT_RING} />
       <FloatingAdviseModal open={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );

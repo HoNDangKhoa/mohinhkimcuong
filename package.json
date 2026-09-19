@@ -6,14 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "cms:import": "node scripts/import-handover-data.mjs",
+    "tinymce:copy": "node scripts/copy-tinymce.mjs",
+    "postinstall": "node scripts/copy-tinymce.mjs"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@tinymce/tinymce-react": "^6.3.0",
     "framer-motion": "^12.38.0",
     "next": "16.2.3",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "tinymce": "^8.9.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

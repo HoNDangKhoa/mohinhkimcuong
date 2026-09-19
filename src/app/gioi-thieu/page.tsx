@@ -4,7 +4,7 @@ import {
 } from "@/lib/site-content";
 import { getCmsAboutArticle, getCmsRelatedArticles } from "@/lib/cms-content";
 import { getCmsAboutPageSlug } from "@/lib/cms-settings";
-import { fetchCmsSeoMetadata, mapCmsSeoMetadataToNext } from "@/lib/cms-seo";
+import { fetchCmsSeoMetadata, mapCmsSeoMetadataToNext, publicArticleMetadata } from "@/lib/cms-seo";
 import {
   ArticleJsonLd,
   ArticleLayout,
@@ -29,17 +29,21 @@ const FALLBACK_METADATA: Metadata = {
 
 export async function generateMetadata(): Promise<Metadata> {
   const selectedSlug = await getCmsAboutPageSlug();
-  const seo = await fetchCmsSeoMetadata("page", selectedSlug || "gioi-thieu");
-  if (!seo) return FALLBACK_METADATA;
-
-  const metadata = mapCmsSeoMetadataToNext(seo);
-  return {
-    ...metadata,
-    alternates: { canonical: "/gioi-thieu" },
-    openGraph: metadata.openGraph
-      ? { ...metadata.openGraph, url: "/gioi-thieu" }
-      : FALLBACK_METADATA.openGraph,
-  };
+  const [seo, article] = await Promise.all([
+    fetchCmsSeoMetadata("page", selectedSlug || "gioi-thieu"),
+    getCmsAboutArticle(),
+  ]);
+  if (seo) {
+    const metadata = mapCmsSeoMetadataToNext(seo);
+    return {
+      ...metadata,
+      alternates: { canonical: "/gioi-thieu" },
+      openGraph: metadata.openGraph
+        ? { ...metadata.openGraph, url: "/gioi-thieu" }
+        : FALLBACK_METADATA.openGraph,
+    };
+  }
+  return publicArticleMetadata(article, "/gioi-thieu", "Giới thiệu | Diamond Model");
 }
 
 export default async function GioiThieuPage() {

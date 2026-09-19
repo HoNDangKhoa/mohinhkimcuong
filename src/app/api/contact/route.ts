@@ -1,3 +1,6 @@
+import { addLead } from "@/lib/cms-local-store";
+import type { LeadSource } from "@/lib/cms-records";
+
 const CMS_BASE_URL =
   process.env.CMS_API_URL ||
   process.env.NEXT_PUBLIC_CMS_API_URL ||
@@ -28,13 +31,6 @@ function cmsUrl(path: string) {
 }
 
 export async function POST(request: Request) {
-  if (!CMS_API_KEY) {
-    return Response.json(
-      { message: "CMS_API_KEY chưa được cấu hình cho website." },
-      { status: 500 },
-    );
-  }
-
   const body = (await request.json().catch(() => null)) as ContactRequestBody | null;
   if (!body) {
     return Response.json({ message: "Dữ liệu gửi lên không hợp lệ." }, { status: 400 });
@@ -50,20 +46,28 @@ export async function POST(request: Request) {
     );
   }
 
+  const rawSource = asString(body.source);
+  const source: LeadSource = rawSource === "consultation-popup" ? "consultation-popup" : "contact-page";
   const payload = {
     name,
     email: asString(body.email),
     phone: asString(body.phone),
     subject: asString(body.subject) || "Liên hệ từ website Diamond Model",
     message,
-    source: asString(body.source) || "website",
+    source,
   };
+
+  await addLead(payload);
+
+  if (!CMS_API_KEY) {
+    return Response.json({ ok: true });
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CMS_TIMEOUT_MS);
 
   try {
-    const response = await fetch(cmsUrl("/api/public/contacts"), {
+    await fetch(cmsUrl("/api/public/contacts"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -73,21 +77,11 @@ export async function POST(request: Request) {
       cache: "no-store",
       signal: controller.signal,
     });
-
-    if (!response.ok) {
-      return Response.json(
-        { message: "CMS chưa nhận được thông tin. Vui lòng thử lại." },
-        { status: response.status },
-      );
-    }
-
-    return Response.json({ ok: true });
   } catch {
-    return Response.json(
-      { message: "Không kết nối được CMS. Vui lòng thử lại sau." },
-      { status: 502 },
-    );
+    // Lead đã lưu local inbox.
   } finally {
     clearTimeout(timeout);
   }
+
+  return Response.json({ ok: true });
 }

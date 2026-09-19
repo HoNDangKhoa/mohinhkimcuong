@@ -1,11 +1,14 @@
 import Image from "next/image";
 import { DIAMOND_VN_BENEFITS, DIAMOND_VN_COMPANY } from "@/lib/diamond-vn";
 import { CARD_DESC_CLASS, CARD_TITLE_CLASS } from "@/components/ui/cardTypography";
+import type { HomeTrustSettings } from "@/lib/cms-settings";
 
-type Benefit = (typeof DIAMOND_VN_BENEFITS)[number];
+type Benefit = { title: string; description: string };
 
-const LEFT_COLUMN: Benefit[] = [DIAMOND_VN_BENEFITS[0], DIAMOND_VN_BENEFITS[2]];
-const RIGHT_COLUMN: Benefit[] = [DIAMOND_VN_BENEFITS[1], DIAMOND_VN_BENEFITS[3]];
+const DEFAULT_ITEMS: Benefit[] = DIAMOND_VN_BENEFITS.map((item) => ({
+  title: item.title,
+  description: item.description,
+}));
 
 function TrustArrow({ reverse = false }: { reverse?: boolean }) {
   return (
@@ -39,11 +42,15 @@ function TrustItem({ benefit, reverse = false }: { benefit: Benefit; reverse?: b
   );
 }
 
-export default function TrustSection() {
+export default function TrustSection({ settings }: { settings?: HomeTrustSettings }) {
+  const items = settings?.items?.length ? settings.items : DEFAULT_ITEMS;
+  const left = [items[0], items[2]].filter(Boolean);
+  const right = [items[1], items[3]].filter(Boolean);
+
   return (
     <section id="trust" className="ph-trust-section relative overflow-hidden text-white">
       <Image
-        src={DIAMOND_VN_COMPANY.trustImage}
+        src={settings?.image || DIAMOND_VN_COMPANY.trustImage}
         alt=""
         fill
         sizes="100vw"
@@ -56,19 +63,19 @@ export default function TrustSection() {
       <div className="ph-container-wide relative">
         <div className="mx-auto max-w-[1360px] pt-8 text-center lg:pt-4">
           <h2 className="font-display text-[44px] font-semibold uppercase leading-[1.05]">
-            DIAMOND MODEL ĐEM ĐẾN CHO KHÁCH HÀNG
+            {settings?.title || "DIAMOND MODEL ĐEM ĐẾN CHO KHÁCH HÀNG"}
           </h2>
         </div>
 
         <div className="mt-12 grid gap-y-12 lg:mt-14 lg:grid-cols-2 lg:gap-x-20 lg:gap-y-14">
           <div className="space-y-12 lg:space-y-14">
-            {LEFT_COLUMN.map((benefit) => (
+            {left.map((benefit) => (
               <TrustItem key={benefit.title} benefit={benefit} />
             ))}
           </div>
 
           <div className="space-y-12 lg:space-y-14">
-            {RIGHT_COLUMN.map((benefit) => (
+            {right.map((benefit) => (
               <TrustItem key={benefit.title} benefit={benefit} reverse />
             ))}
           </div>

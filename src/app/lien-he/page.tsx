@@ -59,9 +59,9 @@ function SocialLink({
 
 export default async function ContactPage() {
   const cmsContact = await getCmsContactSettings();
-  const companyProfileUrl = cmsContact?.companyProfileUrl || DIAMOND_VN_CONTACT.downloadUrl;
-  const companyProfileLabel = cmsContact?.companyProfileLabel || "Tải hồ sơ năng lực";
-  const companyProfileNote = cmsContact?.companyProfileNote || "";
+  const companyProfileUrl = cmsContact.companyProfileUrl || DIAMOND_VN_CONTACT.downloadUrl;
+  const companyProfileLabel = cmsContact.companyProfileLabel || "Tải hồ sơ năng lực";
+  const companyProfileNote = cmsContact.companyProfileNote || "";
 
   return (
     <>
@@ -69,7 +69,7 @@ export default async function ContactPage() {
         <div className="ph-container">
           <AnimatedSection>
             <p className="ph-eyebrow text-center">{DIAMOND_VN_CONTACT.introLabel}</p>
-            <h1 className="ph-title mt-3 text-center">{DIAMOND_VN_CONTACT.introTitle}</h1>
+            <h1 className="ph-title mt-3 text-center">{cmsContact.introTitle}</h1>
           </AnimatedSection>
         </div>
       </section>
@@ -141,26 +141,26 @@ export default async function ContactPage() {
             <AnimatedSection animation="fade-left" delay={150}>
               <div className="space-y-5">
                 <a
-                  href={`tel:${DIAMOND_VN_COMPANY.phoneHref}`}
+                  href={`tel:${cmsContact.phoneHref}`}
                   className="block border-b border-[#d8cfc4] pb-5 text-[#4f4b46] transition hover:text-[#5a8492]"
                 >
                   <p className="text-[12px] uppercase tracking-[0.16em] text-[#7f7a74]">
                     {DIAMOND_VN_CONTACT.hotlineLabel}
                   </p>
                   <strong className="mt-2 block font-heading text-[26px] font-semibold text-[#45413d] md:text-[30px]">
-                    {DIAMOND_VN_COMPANY.phone}
+                    {cmsContact.phone}
                   </strong>
                 </a>
 
                 <a
-                  href={`tel:${DIAMOND_VN_CONTACT.serviceHotline.replace(/\s/g, "")}`}
+                  href={`tel:${cmsContact.serviceHotline.replace(/\s/g, "")}`}
                   className="block border-b border-[#d8cfc4] pb-5 text-[#4f4b46] transition hover:text-[#5a8492]"
                 >
                   <p className="text-[12px] uppercase tracking-[0.16em] text-[#7f7a74]">
                     {DIAMOND_VN_CONTACT.serviceLabel}
                   </p>
                   <strong className="mt-2 block font-heading text-[26px] font-semibold text-[#45413d] md:text-[30px]">
-                    {DIAMOND_VN_CONTACT.serviceHotline}
+                    {cmsContact.serviceHotline}
                   </strong>
                 </a>
 
@@ -180,7 +180,7 @@ export default async function ContactPage() {
           </div>
 
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {DIAMOND_VN_COMPANY.addresses.map((address, index) => (
+            {cmsContact.addresses.map((address, index) => (
               <article key={address.title} className="border border-[#e5d8c7] px-6 py-6">
                 <h3 className="font-heading text-[18px] font-semibold uppercase text-[#45413d]">
                   {index === 0 ? (
@@ -219,7 +219,7 @@ export default async function ContactPage() {
               <p className="ph-eyebrow">{DIAMOND_VN_CONTACT.formLabel}</p>
               <h2 className="ph-title mt-3">Liên hệ với Diamond Model</h2>
               <p className="mx-auto mt-5 max-w-[760px] whitespace-pre-line text-[15px] leading-7 text-[#5d5751]">
-                {DIAMOND_VN_CONTACT.formLead}
+                {cmsContact.formLead}
               </p>
             </div>
           </AnimatedSection>
@@ -230,7 +230,12 @@ export default async function ContactPage() {
         </div>
       </section>
 
-      <ContactCommitmentsSection />
+      <ContactCommitmentsSection
+        label={cmsContact.commitmentsLabel}
+        title={cmsContact.commitmentsTitle}
+        image={cmsContact.commitmentImage}
+        items={cmsContact.commitments}
+      />
     </>
   );
 }

@@ -41,6 +41,9 @@ export type ArticleItem = {
   contentHtml?: string;
   sections: ArticleSection[];
   relatedSlugs: string[];
+  seoTitle?: string;
+  seoDescription?: string;
+  seoKeywords?: string;
 };
 
 export type ArchiveCollection = {

@@ -46,6 +46,13 @@ Xem file `.env.example`. Hai nhóm chính:
 
 **Lưu ý bảo mật:** đặt `CMS_API_KEY` ở biến môi trường phía server (không phải `NEXT_PUBLIC_*`). Toàn bộ lệnh gọi CMS đều chạy ở Server Component hoặc route `/api/contact`, nên key không lộ ra trình duyệt.
 
+CMS quản trị local (`/admin`) dùng thêm:
+
+| Biến | Khi public | Ghi chú |
+|---|---|---|
+| `CMS_ADMIN_USER` / `CMS_ADMIN_PASSWORD` | Bắt buộc đổi | Mặc định local `admin` / `diamondmodel` |
+| `CMS_SESSION_SECRET` | Bắt buộc đổi | Chuỗi ngẫu nhiên; không để trống trên production |
+
 ---
 
 ## 4. Điều quan trọng nhất: website KHÔNG phụ thuộc sống còn vào CMS
@@ -54,9 +61,11 @@ Website được thiết kế theo mô hình **CMS-first, static-fallback**:
 
 ```
 Trang được yêu cầu
-   └─> gọi LOOM CMS (timeout 3.5 giây)
-         ├─ có dữ liệu  -> hiển thị nội dung từ CMS
-         └─ lỗi/hết hạn -> tự động dùng dữ liệu tĩnh trong src/lib/site-content.ts
+   └─> store local (data/cms-local.json)
+         ├─ có dữ liệu  -> hiển thị từ CMS local /admin
+         └─ trống       -> gọi LOOM CMS (timeout 3.5 giây)
+                              ├─ có dữ liệu  -> nội dung LOOM
+                              └─ lỗi/hết hạn -> dữ liệu tĩnh src/lib/site-content.ts
 ```
 
 Nghĩa là:
@@ -73,16 +82,18 @@ Nếu cần gia hạn thêm thời gian kết nối, liên hệ Loom để đi�
 
 ```
 src/
-├── app/            # Route (App Router) — mỗi thư mục là một trang
-├── components/     # Component giao diện: home, layout, ui, contact, content
+├── app/            # Route (App Router) — mỗi thư mục là một trang; /admin là CMS
+├── components/     # Component giao diện: home, layout, ui, contact, content, admin
 ├── lib/            # Kết nối CMS + dữ liệu tĩnh dự phòng
 │   ├── cms-content.ts    # Lấy dự án / dịch vụ / tin tức / trang tĩnh
 │   ├── cms-settings.ts   # Lấy cấu hình: hero, logo, thông tin liên hệ
 │   ├── cms-seo.ts        # Lấy SEO: title, description, sitemap, robots
+│   ├── cms-local-store.ts# Store JSON local (CMS /admin)
 │   ├── site-content.ts   # ⭐ DỮ LIỆU TĨNH DỰ PHÒNG (~50KB)
 │   └── diamond-vn.ts     # Dữ liệu tĩnh bổ sung
 ├── hooks/          # Custom React hooks
 public/             # Ảnh, font, file tĩnh
+data/               # cms-local.json (gitignored) — tạo bằng npm run cms:import
 ```
 
 **Muốn sửa nội dung mà không cần CMS:** sửa trực tiếp `src/lib/site-content.ts` rồi build lại.
@@ -154,23 +165,46 @@ Riêng dự án (`projects`) có thêm: `client`, `location`, `area`, `scale`, `
 
 ---
 
-## 7. Triển khai (deploy)
+## 7. CMS quản trị nội dung (trong source này)
+
+```bash
+# Nạp gói bàn giao (thư mục cùng cấp với repo: ../diamondmodel-data-2026-08-26)
+npm run cms:import
+
+# Đăng nhập: http://localhost:3000/admin
+# Local mặc định: admin / diamondmodel
+```
+
+- TinyMCE tự copy vào `public/tinymce/` lúc `postinstall`.
+- `data/cms-local.json`, `public/handover-media/`, `public/tinymce/` **không commit**. Máy/server mới phải `npm install` rồi `cms:import`.
+- Form liên hệ ghi vào store local (Thư liên hệ), sau đó mới thử đẩy sang LOOM nếu có API key.
+
+## 8. Triển khai (deploy)
 
 Đây là ứng dụng Next.js tiêu chuẩn, chạy được trên bất kỳ nền tảng nào hỗ trợ Node.js: Vercel, Netlify, hoặc VPS tự quản (PM2 / Docker).
 
 Trên VPS tự quản:
 
 ```bash
+cp .env.example .env.local   # đổi CMS_ADMIN_PASSWORD + CMS_SESSION_SECRET
 npm ci
+npm run cms:import           # cần gói diamondmodel-data cạnh repo
 npm run build
-npm run start        # mặc định cổng 3000, nên đặt sau Nginx reverse proxy
+npm run start                # mặc định cổng 3000, nên đặt sau Nginx reverse proxy
 ```
+
+**Trước khi public code / production:**
+
+- [ ] Đổi `CMS_ADMIN_PASSWORD` và `CMS_SESSION_SECRET`
+- [ ] Không commit `.env*`, `data/cms-local.json`, media bàn giao
+- [ ] Chạy `cms:import` trên server để có nội dung + ảnh `/handover-media/`
+- [ ] `SITE_URL` / `NEXT_PUBLIC_SITE_URL` trỏ `https://diamondmodel.vn`
 
 **Lưu ý về ảnh:** mọi domain chứa ảnh phải được khai báo trong `next.config.ts` (mục `images.remotePatterns`). Nếu sau này chuyển ảnh sang hệ thống lưu trữ riêng, nhớ thêm domain mới vào đây — thiếu bước này ảnh sẽ bị vỡ (lỗi 400 từ Image Optimizer).
 
 ---
 
-## 8. Bàn giao kèm theo
+## 9. Bàn giao kèm theo
 
 - [ ] Gói dữ liệu nội dung (SQL + JSON): dự án, dịch vụ, tin tức, trang tĩnh, danh mục, cấu hình
 - [ ] Gói hình ảnh: toàn bộ file media của website

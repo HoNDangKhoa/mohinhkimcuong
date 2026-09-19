@@ -30,13 +30,13 @@ export default async function Home() {
         <MissionSection settings={homeSettings.mission} />
       </HomeReveal>
       <HomeReveal>
-        <TrustSection />
+        <TrustSection settings={homeSettings.trust} />
       </HomeReveal>
       <HomeReveal>
         <ProjectsSection items={projectCollection.items} />
       </HomeReveal>
       <HomeReveal>
-        <ProcessSection />
+        <ProcessSection settings={homeSettings.process} />
       </HomeReveal>
       <HomeReveal>
         <StatsSection settings={homeSettings.stats} />

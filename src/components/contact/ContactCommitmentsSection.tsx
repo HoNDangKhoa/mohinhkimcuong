@@ -3,8 +3,6 @@ import AnimatedSection from "@/components/ui/AnimatedSection";
 import { CARD_TITLE_CLASS } from "@/components/ui/cardTypography";
 import { DIAMOND_VN_CONTACT } from "@/lib/diamond-vn";
 
-const LEFT_ITEMS = DIAMOND_VN_CONTACT.commitments.slice(0, 3);
-const RIGHT_ITEMS = DIAMOND_VN_CONTACT.commitments.slice(3);
 
 function CommitmentItem({ title }: { title: string }) {
   return (
@@ -17,27 +15,41 @@ function CommitmentItem({ title }: { title: string }) {
   );
 }
 
-export default function ContactCommitmentsSection() {
+export default function ContactCommitmentsSection({
+  label,
+  title,
+  image,
+  items,
+}: {
+  label?: string;
+  title?: string;
+  image?: string;
+  items?: readonly string[];
+}) {
+  const commitments = items?.length ? items : DIAMOND_VN_CONTACT.commitments;
+  const left = commitments.slice(0, 3);
+  const right = commitments.slice(3);
+
   return (
     <section className="ph-section-tight bg-transparent pb-24">
       <div className="ph-container">
         <AnimatedSection>
           <div className="text-center">
-            <p className="ph-eyebrow">{DIAMOND_VN_CONTACT.commitmentsLabel}</p>
-            <h2 className="ph-title mt-3">{DIAMOND_VN_CONTACT.commitmentsTitle}</h2>
+            <p className="ph-eyebrow">{label || DIAMOND_VN_CONTACT.commitmentsLabel}</p>
+            <h2 className="ph-title mt-3">{title || DIAMOND_VN_CONTACT.commitmentsTitle}</h2>
           </div>
         </AnimatedSection>
 
         <div className="mt-12 grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)_minmax(0,1fr)] lg:gap-14">
           <div className="space-y-10">
-            {LEFT_ITEMS.map((item) => (
+            {left.map((item) => (
               <CommitmentItem key={item} title={item} />
             ))}
           </div>
 
           <div className="relative mx-auto aspect-square w-full max-w-[360px]">
             <Image
-              src={DIAMOND_VN_CONTACT.commitmentImage}
+              src={image || DIAMOND_VN_CONTACT.commitmentImage}
               alt="Diamond Model cam kết"
               fill
               sizes="(max-width: 1024px) 100vw, 360px"
@@ -48,7 +60,7 @@ export default function ContactCommitmentsSection() {
           </div>
 
           <div className="space-y-10">
-            {RIGHT_ITEMS.map((item) => (
+            {right.map((item) => (
               <CommitmentItem key={item} title={item} />
             ))}
           </div>

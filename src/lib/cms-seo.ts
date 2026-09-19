@@ -88,7 +88,27 @@ function cmsHeaders() {
   return headers;
 }
 
+function isThisSiteHost(hostname: string) {
+  const host = hostname.replace(/^www\./, "").toLowerCase();
+  const own = SITE_HOST.replace(/^www\./, "").toLowerCase();
+  return host === own;
+}
+
+function textBelongsToThisSite(text: string) {
+  const lower = text.toLowerCase();
+  const host = SITE_HOST.replace(/^www\./, "").toLowerCase();
+  return Boolean(host) && lower.includes(host);
+}
+
+function rewriteLegacySiteUrl(value: string) {
+  return value
+    .replace(/^https?:\/\/(www\.)?mohinhkimcuong\.vn\/(diamond-vn|diamondmodel)\//i, "/$2/")
+    .replace(/^https?:\/\/(www\.)?mohinhkimcuong\.vn\/?$/i, SITE_URL);
+}
+
 async function cmsFetch(path: string, cacheMode: CmsFetchCacheMode = "revalidate"): Promise<Response | null> {
+  if (!CMS_API_KEY) return null;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), CMS_TIMEOUT_MS);
 
@@ -122,15 +142,29 @@ async function cmsFetchJson<T>(path: string, cacheMode?: CmsFetchCacheMode): Pro
 }
 
 export async function fetchCmsSeoSettings(): Promise<CmsSeoSettings | null> {
-  const response = await cmsFetchJson<CmsPublicSettingsResponse>("/api/public/settings/seo", "no-store");
-  const values = response?.values;
-  if (!values) return null;
+  const { getLocalSettings } = await import("@/lib/cms-local-store");
+  const [response, local] = await Promise.all([
+    cmsFetchJson<CmsPublicSettingsResponse>("/api/public/settings/seo", "no-store"),
+    getLocalSettings("seo"),
+  ]);
+  const values = { ...(response?.values || {}), ...local };
+  if (!Object.keys(values).length) return null;
 
   const siteTitle = values.seo_title?.trim();
   const siteDescription = values.seo_description?.trim();
   const siteKeywords = parseKeywords(values.seo_keywords || "");
-  const siteUrl = values.seo_site_url?.trim() || SITE_URL;
-  const defaultOgImage = values.seo_default_og_image?.trim() || "";
+  const importedSiteUrl = rewriteLegacySiteUrl(values.seo_site_url?.trim() || "").replace(/\/+$/, "");
+  let siteUrl = SITE_URL;
+  try {
+    if (importedSiteUrl && isThisSiteHost(new URL(importedSiteUrl).hostname)) {
+      siteUrl = importedSiteUrl;
+    }
+  } catch {
+    siteUrl = SITE_URL;
+  }
+  const defaultOgImage = rewriteLegacySiteUrl((values.seo_default_og_image || "").trim())
+    .replace(/^\/media\/media-diamond-model\/media\//, "/handover-media/")
+    .replace(/^media\//, "/handover-media/");
 
   if (
     !siteTitle &&
@@ -148,6 +182,35 @@ export async function fetchCmsSeoSettings(): Promise<CmsSeoSettings | null> {
     siteKeywords,
     siteUrl,
     defaultOgImage,
+  };
+}
+
+export async function getArchivePageSeo(kind: "projects" | "services" | "articles") {
+  const { getLocalSettings } = await import("@/lib/cms-local-store");
+  const [globalSeo, local] = await Promise.all([fetchCmsSeoSettings(), getLocalSettings("seo")]);
+  const prefix = `seo_page_${kind}`;
+  const title = local[`${prefix}_title`]?.trim() || "";
+  const description = local[`${prefix}_description`]?.trim() || globalSeo?.siteDescription || "";
+  const keywords = parseKeywords(local[`${prefix}_keywords`] || "");
+  return { title, description, keywords };
+}
+
+export function publicArticleMetadata(article: ArticleItem, path: string, suffix: string): Metadata {
+  const title = article.seoTitle || `${article.title} | ${suffix}`;
+  const description = article.seoDescription || article.summary;
+  const keywords = parseKeywords(article.seoKeywords || "");
+  return {
+    title,
+    description,
+    keywords: keywords.length ? keywords : undefined,
+    alternates: { canonical: path },
+    openGraph: {
+      title,
+      description,
+      url: path,
+      type: "article",
+      images: article.heroImage ? [article.heroImage] : undefined,
+    },
   };
 }
 
@@ -181,7 +244,9 @@ export function mapCmsSeoMetadataToNext(metadata: CmsSeoMetadata): Metadata {
 export async function fetchCmsSeoText(path: "/api/seo/robots.txt" | "/api/seo/llms.txt" | "/api/seo/llms-full.txt") {
   const response = await cmsFetch(path);
   const text = await response?.text();
-  return text?.trim() ? text.trim() : null;
+  const trimmed = text?.trim() || "";
+  if (!trimmed || !textBelongsToThisSite(trimmed)) return null;
+  return trimmed;
 }
 
 export async function fetchCmsSitemap(): Promise<MetadataRoute.Sitemap | null> {
@@ -196,6 +261,11 @@ export async function fetchCmsSitemap(): Promise<MetadataRoute.Sitemap | null> {
   entries.forEach((entry) => {
     const url = entry.url || entry.loc;
     if (!url) return;
+    try {
+      if (!isThisSiteHost(new URL(url).hostname)) return;
+    } catch {
+      return;
+    }
 
     sitemap.push({
       url,
@@ -208,6 +278,53 @@ export async function fetchCmsSitemap(): Promise<MetadataRoute.Sitemap | null> {
   return sitemap.length ? sitemap : null;
 }
 
+export async function buildLocalSitemap(): Promise<MetadataRoute.Sitemap | null> {
+  const { getStoredCollection } = await import("@/lib/cms-local-store");
+  const [projects, services, articles] = await Promise.all([
+    getStoredCollection("projects"),
+    getStoredCollection("services"),
+    getStoredCollection("articles"),
+  ]);
+
+  if (!projects.length && !services.length && !articles.length) return null;
+
+  const staticEntries: MetadataRoute.Sitemap = SITE_PAGES.map((path) => ({
+    url: absoluteUrl(path),
+    lastModified: SITE_BUILD_DATE_ISO,
+    changeFrequency: path === "/" ? "daily" : "weekly",
+    priority: path === "/" ? 1 : 0.8,
+  }));
+
+  const fromRecords = (
+    records: Awaited<ReturnType<typeof getStoredCollection>>,
+    prefix: "du-an" | "dich-vu" | "tin-tuc",
+    priority: number,
+  ): MetadataRoute.Sitemap =>
+    records
+      .filter((record) => record.status === "published" && record.slug && record.indexable !== false)
+      .map((record) => ({
+        url: absoluteUrl(`/${prefix}/${record.slug}`),
+        lastModified: record.updatedAt || record.publishedAt || SITE_BUILD_DATE_ISO,
+        changeFrequency: "monthly",
+        priority,
+      }));
+
+  const aiIndexEntries: MetadataRoute.Sitemap = ["/llms.txt", "/llms-full.txt"].map((path) => ({
+    url: absoluteUrl(path),
+    lastModified: SITE_BUILD_DATE_ISO,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
+  return dedupeSitemap([
+    ...staticEntries,
+    ...fromRecords(projects, "du-an", 0.7),
+    ...fromRecords(services, "dich-vu", 0.7),
+    ...fromRecords(articles, "tin-tuc", 0.7),
+    ...aiIndexEntries,
+  ]);
+}
+
 export function buildFallbackRobotsTxt() {
   return [
     "# *",
@@ -217,6 +334,7 @@ export function buildFallbackRobotsTxt() {
     "Disallow: /success",
     "Disallow: /tracking",
     "Disallow: /api/",
+    "Disallow: /admin",
     "",
     "# Googlebot",
     "User-agent: Googlebot",

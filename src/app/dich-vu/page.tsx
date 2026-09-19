@@ -5,7 +5,7 @@ import {
   CollectionJsonLd,
 } from "@/components/content/PageLayouts";
 import { getCmsGeneralSettings } from "@/lib/cms-settings";
-import { fetchCmsSeoSettings } from "@/lib/cms-seo";
+import { getArchivePageSeo } from "@/lib/cms-seo";
 import { getCmsCollection } from "@/lib/cms-content";
 
 export const dynamic = "force-dynamic";
@@ -14,20 +14,22 @@ const FALLBACK_DESCRIPTION =
   "Danh mục dịch vụ Diamond Model gồm tư vấn sa bàn, thi công, thiết kế 3D phối cảnh và bảo trì mô hình, được trình bày theo dạng blog/portfolio rõ ràng.";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const [seoSettings, generalSettings] = await Promise.all([
-    fetchCmsSeoSettings(),
+  const [archiveSeo, generalSettings] = await Promise.all([
+    getArchivePageSeo("services"),
     getCmsGeneralSettings(),
   ]);
 
   const siteName = generalSettings?.siteName || "Diamond Model";
-  const description = seoSettings?.siteDescription || FALLBACK_DESCRIPTION;
+  const title = archiveSeo.title || `Dịch vụ | ${siteName}`;
+  const description = archiveSeo.description || FALLBACK_DESCRIPTION;
 
   return {
-    title: `Dịch vụ | ${siteName}`,
+    title,
     description,
+    keywords: archiveSeo.keywords.length ? archiveSeo.keywords : undefined,
     alternates: { canonical: "/dich-vu" },
     openGraph: {
-      title: `Dịch vụ | ${siteName}`,
+      title,
       description,
       url: "/dich-vu",
       type: "website",

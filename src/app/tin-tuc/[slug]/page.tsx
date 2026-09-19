@@ -10,7 +10,7 @@ import {
   SITE_URL,
 } from "@/lib/site-content";
 import { getCmsArticleBySlug, getCmsRelatedArticles } from "@/lib/cms-content";
-import { fetchCmsSeoMetadata, mapCmsSeoMetadataToNext } from "@/lib/cms-seo";
+import { fetchCmsSeoMetadata, mapCmsSeoMetadataToNext, publicArticleMetadata } from "@/lib/cms-seo";
 
 export const dynamic = "force-dynamic";
 export const dynamicParams = true;
@@ -38,17 +38,7 @@ export async function generateMetadata({
     return mapCmsSeoMetadataToNext(seo);
   }
 
-  return {
-    title: `${article.title} | Tin tức Diamond Model`,
-    description: article.summary,
-    alternates: { canonical: `/tin-tuc/${article.slug}` },
-    openGraph: {
-      title: `${article.title} | Tin tức Diamond Model`,
-      description: article.summary,
-      url: `/tin-tuc/${article.slug}`,
-      type: "article",
-    },
-  };
+  return publicArticleMetadata(article, `/tin-tuc/${article.slug}`, "Tin tức Diamond Model");
 }
 
 export default async function TinTucDetailPage({
